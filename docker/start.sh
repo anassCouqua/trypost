@@ -33,8 +33,14 @@ php artisan migrate --force --ansi
 php artisan storage:link || true
 php artisan optimize --ansi
 
-# Keep the scheduler and queue worker alive alongside Apache on the free web service.
-php artisan schedule:work >/tmp/trypost-scheduler.log 2>&1 &
-php artisan horizon >/tmp/trypost-horizon.log 2>&1 &
+# Keep the scheduler lightweight on Render's 512 MB free instance.
+# Run it once per minute instead of keeping a long-lived PHP scheduler
+# process in memory. Horizon is intentionally disabled on the free plan.
+(
+  while true; do
+    php artisan schedule:run --no-ansi >/tmp/trypost-scheduler.log 2>&1 || true
+    sleep 60
+  done
+) &
 
 exec apache2-foreground
