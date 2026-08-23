@@ -19,7 +19,10 @@ services:
       - key: APP_KEY
         generateValue: true
       - key: APP_URL
-        sync: false
+        fromService:
+          name: trypost
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -32,12 +35,11 @@ services:
         value: postgres
       - key: DB_PASSWORD
         sync: false
-      - key: REDIS_HOST
-        sync: false
-      - key: REDIS_PORT
-        value: "6379"
-      - key: REDIS_PASSWORD
-        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: trypost-redis
+          type: keyvalue
+          property: connectionString
       - key: QUEUE_CONNECTION
         value: redis
       - key: CACHE_STORE
