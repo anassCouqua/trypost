@@ -70,5 +70,3 @@ services:
         sync: false
       - key: PASSPORT_PUBLIC_KEY
         sync: false
-      - key: OPENAI_API_KEY
-        sync: false
