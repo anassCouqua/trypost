@@ -44,7 +44,7 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
     && printf '%s\n' \
       '<VirtualHost *:10000>' \
       '    RewriteEngine On' \
-      '    RewriteRule ^/$ /login [R=302,L]' \
+      '    RewriteRule ^/$ https://trypost-5g6o.onrender.com/login [R=302,L]' \
       '    DocumentRoot /var/www/html/public' \
       '    <Directory /var/www/html/public>' \
       '        AllowOverride All' \
