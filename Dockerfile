@@ -40,8 +40,9 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && npm run build
 
 RUN chown -R www-data:www-data storage bootstrap/cache \
+    && sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
     && printf '%s\n' \
-      '<VirtualHost *:80>' \
+      '<VirtualHost *:10000>' \
       '    DocumentRoot /var/www/html/public' \
       '    <Directory /var/www/html/public>' \
       '        AllowOverride All' \
@@ -53,5 +54,5 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 COPY docker/start.sh /usr/local/bin/start-trypost
 RUN chmod +x /usr/local/bin/start-trypost
 
-EXPOSE 80
+EXPOSE 10000
 CMD ["start-trypost"]
