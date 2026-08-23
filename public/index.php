@@ -5,6 +5,12 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// Keep the public entry point out of the authenticated Laravel route stack.
+if ($_SERVER['REQUEST_URI'] === '/' || parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) === '/') {
+    header('Location: /login', true, 302);
+    exit;
+}
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
