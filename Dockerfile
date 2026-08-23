@@ -1,9 +1,15 @@
-FROM composer:2.8 AS vendor
+FROM php:8.4-cli AS vendor
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    libpq-dev libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev unzip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) pdo_pgsql bcmath pcntl gd intl zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts \
-    --ignore-platform-req=ext-pcntl \
-    --ignore-platform-req=ext-bcmath
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
 
 FROM node:22-alpine AS assets
 WORKDIR /app
