@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -20,11 +21,17 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(Request $request): Response
     {
-        return Inertia::render('auth/Login', [
-            'status' => session('status'),
-            'email' => $request->query('email'),
-            'invite' => $request->query('invite'),
-        ]);
+        try {
+            return Inertia::render('auth/Login', [
+                'status' => session('status'),
+                'email' => $request->query('email'),
+                'invite' => $request->query('invite'),
+            ]);
+        } catch (Throwable $e) {
+            error_log('TryPost /login exception: '.get_class($e).' - '.$e->getMessage());
+            error_log($e->getTraceAsString());
+            throw $e;
+        }
     }
 
     /**
