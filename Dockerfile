@@ -31,7 +31,9 @@ RUN npm ci
 
 COPY . .
 
-RUN cp .env.example .env \
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && touch storage/framework/cache/.gitignore storage/framework/sessions/.gitignore storage/framework/views/.gitignore \
+    && cp .env.example .env \
     && php artisan key:generate --force \
     && php artisan config:clear \
     && php artisan wayfinder:generate --with-form \
