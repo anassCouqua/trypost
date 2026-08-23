@@ -45,7 +45,7 @@ services:
       - key: CACHE_STORE
         value: redis
       - key: SESSION_DRIVER
-        value: database
+        value: file
       - key: FILESYSTEM_DISK
         value: local
       - key: MAIL_MAILER
