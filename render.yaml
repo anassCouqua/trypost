@@ -26,7 +26,7 @@ services:
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        value: aws-eu-west-1.pooler.supabase.com
+        value: aws-1-eu-west-1.pooler.supabase.com
       - key: DB_PORT
         value: "5432"
       - key: DB_DATABASE
