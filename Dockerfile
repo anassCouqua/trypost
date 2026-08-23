@@ -1,40 +1,37 @@
-FROM php:8.4-cli AS vendor
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    libpq-dev libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) pdo_pgsql bcmath pcntl gd intl zip \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
-
-FROM node:22-alpine AS assets
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
-COPY resources ./resources
-COPY vite.config.* ./
-COPY postcss.config.* ./
-COPY tailwind.config.* ./
-COPY public ./public
-RUN npm run build
-
 FROM php:8.4-apache
+
 WORKDIR /var/www/html
 
 RUN apt-get update && apt-get install -y \
-    libpq-dev libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev unzip supervisor \
+    curl \
+    git \
+    unzip \
+    libpq-dev \
+    libzip-dev \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libicu-dev \
+    libonig-dev \
+    supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) pdo_pgsql bcmath pcntl gd intl zip opcache \
     && a2enmod rewrite headers \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=vendor /app/vendor ./vendor
+COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
 COPY . .
-COPY --from=assets /app/public/build ./public/build
+
+RUN npm run build
 
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && printf '%s\n' \
