@@ -43,6 +43,8 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
     && sed -i 's/^Listen 80$/Listen 10000/' /etc/apache2/ports.conf \
     && printf '%s\n' \
       '<VirtualHost *:10000>' \
+      '    RewriteEngine On' \
+      '    RewriteRule ^/$ /login [R=302,L]' \
       '    DocumentRoot /var/www/html/public' \
       '    <Directory /var/www/html/public>' \
       '        AllowOverride All' \
