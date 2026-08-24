@@ -203,7 +203,7 @@ class StreamPostCreation implements ShouldBeUnique, ShouldQueue
         $post = CreatePost::execute($workspace, $user, [
             'content' => $generated->content,
             'media' => $generated->media,
-            'date' => $this->date,
+            'scheduled_at' => $this->date,
             'created_via' => CreatedVia::Web,
         ]);
 

@@ -19,7 +19,8 @@ Schedule::command(CheckSocialConnections::class)->daily()->withoutOverlapping()-
 Schedule::command(CheckUpcomingPostConnections::class)->everyFifteenMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command(RefreshExpiringTokens::class)->everyFifteenMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command(RecoverStuckPosts::class)->everyThirtyMinutes()->withoutOverlapping()->onOneServer();
-Schedule::command(GenerateSnay3iPosts::class)->everyThirtyMinutes()->withoutOverlapping()->onOneServer();
+// Run frequently; the command itself is idempotent and only fills missing upcoming slots.
+Schedule::command(GenerateSnay3iPosts::class)->everyMinute()->withoutOverlapping()->onOneServer();
 Schedule::command(FireScheduleTriggers::class)->everyMinute()->withoutOverlapping()->onOneServer();
 Schedule::command(ProcessAutomationDelays::class)->everyMinute()->withoutOverlapping()->onOneServer();
 Schedule::command(RecoverStuckAutomationRuns::class)->everyFiveMinutes()->withoutOverlapping()->onOneServer();
