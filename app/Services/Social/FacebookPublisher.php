@@ -29,13 +29,32 @@ class FacebookPublisher
         $this->baseUrl = config('trypost.platforms.facebook.graph_api');
     }
 
-    /**
-     * Graph API expects application/x-www-form-urlencoded (or multipart), not JSON.
-     * Sending JSON makes `message` work but silently drops `attached_media[*]` on /feed.
-     */
     private function facebookHttp(): PendingRequest
     {
         return $this->socialHttp()->asForm();
+    }
+
+    /**
+     * Facebook Graph API requires remotely fetchable absolute URLs for hosted
+     * media. Laravel's Storage::url() can return a relative path when APP_URL
+     * is missing or stale, so normalize every media URL at the final boundary.
+     */
+    private function absoluteMediaUrl(string $url): string
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL)) {
+            return $url;
+        }
+
+        $appUrl = rtrim((string) config('app.url'), '/');
+
+        if ($appUrl === '') {
+            throw new FacebookPublishException(
+                userMessage: 'Facebook media hosting is not configured correctly. Please contact support.',
+                category: ErrorCategory::ServerError,
+            );
+        }
+
+        return $appUrl.'/'.ltrim($url, '/');
     }
 
     public function publish(PostPlatform $postPlatform): array
@@ -65,7 +84,6 @@ class FacebookPublisher
 
     private function publishPost(string $pageId, string $accessToken, ?string $content, $media, ?string $aspectRatio): array
     {
-        // Text only post
         if ($media->isEmpty()) {
             if ($content === null || $content === '') {
                 throw new FacebookPublishException(
@@ -86,7 +104,6 @@ class FacebookPublisher
         }
 
         if ($isImage) {
-            // Single or multiple images
             if ($media->count() === 1) {
                 return $this->publishSingleImagePost($pageId, $accessToken, $content, $firstMedia, $aspectRatio);
             }
@@ -126,8 +143,10 @@ class FacebookPublisher
 
     private function publishSingleImagePost(string $pageId, string $accessToken, ?string $content, $media, ?string $aspectRatio): array
     {
+        $sourceUrl = $this->absoluteMediaUrl($this->cropImageForAspectRatio($this->absoluteMediaUrl($media->url), $aspectRatio));
+
         $payload = [
-            'url' => $this->cropImageForAspectRatio($media->url, $aspectRatio),
+            'url' => $sourceUrl,
             'access_token' => $accessToken,
         ];
 
@@ -162,7 +181,6 @@ class FacebookPublisher
 
     private function publishMultiImagePost(string $pageId, string $accessToken, ?string $content, $mediaCollection, ?string $aspectRatio): array
     {
-        // Upload each image as unpublished
         $attachedMedia = [];
 
         foreach ($mediaCollection as $media) {
@@ -170,8 +188,10 @@ class FacebookPublisher
                 continue;
             }
 
+            $sourceUrl = $this->absoluteMediaUrl($this->cropImageForAspectRatio($this->absoluteMediaUrl($media->url), $aspectRatio));
+
             $uploadPayload = [
-                'url' => $this->cropImageForAspectRatio($media->url, $aspectRatio),
+                'url' => $sourceUrl,
                 'published' => 'false',
                 'access_token' => $accessToken,
             ];
@@ -203,7 +223,6 @@ class FacebookPublisher
             );
         }
 
-        // Create the post with attached media
         $postData = [
             'access_token' => $accessToken,
         ];
@@ -238,7 +257,7 @@ class FacebookPublisher
     private function publishVideoPost(string $pageId, string $accessToken, ?string $content, $media): array
     {
         $payload = [
-            'file_url' => $media->url,
+            'file_url' => $this->absoluteMediaUrl($media->url),
             'access_token' => $accessToken,
         ];
 
@@ -267,7 +286,6 @@ class FacebookPublisher
 
     private function publishReel(string $pageId, string $accessToken, ?string $content, $media): array
     {
-        // Phase 1 (start) — graph endpoint returns video_id + upload_url.
         $startResponse = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/video_reels", [
             'upload_phase' => 'start',
             'access_token' => $accessToken,
@@ -290,18 +308,12 @@ class FacebookPublisher
             );
         }
 
-        // Phase 2 (transfer, local-file flow) — download our hosted
-        // media then POST raw bytes to upload_url with the Offset and
-        // file_size headers Facebook requires (the docs describe a
-        // hosted-file shortcut with `file_url` in the body, but rupload
-        // rejects it with "Header Offset not convertable to unsigned
-        // long" — the headers are required either way).
         $tempFile = tempnam(sys_get_temp_dir(), 'fb_reel_');
 
         try {
             $download = Http::withOptions(['sink' => $tempFile])
                 ->timeout(600)
-                ->get($media->url);
+                ->get($this->absoluteMediaUrl($media->url));
 
             if ($download->failed()) {
                 throw new FacebookPublishException(
@@ -339,7 +351,6 @@ class FacebookPublisher
             }
         }
 
-        // Phase 3 (finish) — publish the reel.
         $finishPayload = [
             'upload_phase' => 'finish',
             'video_id' => $videoId,
@@ -395,7 +406,7 @@ class FacebookPublisher
 
         $transferResponse = $this->facebookHttp()->post("{$this->baseUrl}/{$videoId}", [
             'upload_phase' => 'transfer',
-            'video_file_chunk' => $media->url,
+            'video_file_chunk' => $this->absoluteMediaUrl($media->url),
             'access_token' => $accessToken,
         ]);
 
