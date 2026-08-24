@@ -44,11 +44,13 @@ php artisan optimize --ansi
 ) &
 
 # Process Laravel's database-backed publishing jobs on the same instance.
-# Horizon is intentionally disabled on the free plan, so a queue worker is
-# required here; without it, jobs remain stuck in PUBLISHING indefinitely.
+# Social publishing jobs are routed to per-platform queues (for example,
+# social-facebook), so the worker must listen to all application queues.
+# Horizon is intentionally disabled on the free plan.
 (
-  php artisan queue:work database --sleep=3 --tries=3 --timeout=300 --max-time=86400 --no-interaction --no-ansi \
-    >/tmp/trypost-queue-worker.log 2>&1
+  php artisan queue:work database \
+    --queue=default,social-linkedin,social-linkedin-page,social-x,social-tiktok,social-youtube,social-facebook,social-instagram,social-instagram-facebook,social-threads,social-pinterest,social-bluesky,social-mastodon,social-telegram,social-discord \
+    --sleep=3 --tries=3 --timeout=900 --max-time=86400 --no-interaction --no-ansi
 ) &
 
 exec apache2-foreground
