@@ -49,6 +49,15 @@ return Application::configure(basePath: dirname(__DIR__))
             return $e instanceof OAuthServerException && $e->getHttpStatusCode() < 500;
         });
 
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if ($request->is('login') && ! $request->expectsJson()) {
+                error_log('TryPost /login global exception: '.get_class($e).' - '.$e->getMessage());
+                error_log($e->getTraceAsString());
+                return response('TryPost login exception: '.get_class($e).' - '.$e->getMessage(), 500)
+                    ->header('Content-Type', 'text/plain; charset=UTF-8');
+            }
+        });
+
         $exceptions->renderable(function (TooManyRequestsHttpException $e, Request $request) {
             if ($request->expectsJson()) {
                 $retryAfter = $e->getHeaders()['Retry-After'] ?? null;
