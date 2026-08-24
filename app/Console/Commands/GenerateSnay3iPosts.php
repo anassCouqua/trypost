@@ -40,8 +40,8 @@ class GenerateSnay3iPosts extends Command
             ->whereDate('created_at', $today->toDateString())
             ->count();
 
-        if ($dailyCount >= 2 && ! $this->option('force')) {
-            $this->info('Snay3i daily automation limit reached (2 posts).');
+        if ($dailyCount >= 5 && ! $this->option('force')) {
+            $this->info('Snay3i daily automation limit reached (5 posts).');
 
             return self::SUCCESS;
         }
@@ -52,7 +52,7 @@ class GenerateSnay3iPosts extends Command
             ->latest('created_at')
             ->first();
 
-        if ($lastAutomation && $lastAutomation->created_at->gt(now()->subHours(6)) && ! $this->option('force')) {
+        if ($lastAutomation && $lastAutomation->created_at->gt(now()->subHours(2)) && ! $this->option('force')) {
             $this->info('Snay3i automation cooldown is active; next post will be generated later.');
 
             return self::SUCCESS;
@@ -67,6 +67,9 @@ class GenerateSnay3iPosts extends Command
             'a customer problem and the right skilled professional who can solve it',
             'the value of local craftsmanship and giving Moroccan artisans more visibility',
             'a motivational message for people who have a skill but are struggling to find work',
+            'how a clear service description helps customers choose the right professional',
+            'why reviews, photos, and a complete profile build trust before the first call',
+            'a simple home-maintenance tip that helps Moroccan homeowners prevent bigger problems',
         ];
 
         $theme = $themes[((int) $today->isoWeekday() + $slot - 2) % count($themes)];
@@ -77,7 +80,7 @@ You are the social media content director for Snay3i.ma, a Moroccan platform tha
 Create one high-quality Facebook post for Moroccan audiences.
 
 Today's theme: {$theme}
-Post slot: {$slot} of 2 today
+Post slot: {$slot} of 5 today
 Date: {$today->toDateString()}
 
 Goals:
@@ -88,7 +91,9 @@ Goals:
 - avoid generic corporate marketing language and repetitive hooks;
 - use a natural Moroccan tone: primarily French, with a light Darija touch when it genuinely improves the post;
 - end with one clear CTA to discover Snay3i.ma or create a professional profile;
-- keep hashtags focused and useful (maximum 6).
+- keep hashtags focused and useful (maximum 6);
+- vary the hook, structure, CTA, and vocabulary from recent automated posts;
+- prefer useful, educational, relatable, or community-driven content over repeated promotion.
 
 The image should visually fit the post and be suitable for a Moroccan audience. Prefer realistic people, real trades, tools, homes, workshops, and local context over generic office stock imagery.
 PROMPT;
