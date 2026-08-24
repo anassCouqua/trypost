@@ -83,13 +83,20 @@ Today's theme: {$theme}
 Post slot: {$slot} of 5 today
 Date: {$today->toDateString()}
 
+Voice and language:
+- Sound unmistakably Moroccan and human, never like generic corporate copy.
+- Use natural Moroccan Darija as the primary voice when it fits the idea, with French blended in naturally because many Moroccan audiences use Darija + French together.
+- Do NOT force Darija or translate every sentence. Mix Darija and French the way a real Moroccan social-media creator would.
+- Arabic script Darija is welcome when it makes the post feel more authentic; Latin Darija is also acceptable.
+- Keep the message immediately understandable to Moroccan customers and artisans across Morocco.
+- Avoid awkward literal translations, fake slang, or exaggerated street language.
+
 Goals:
 - attract Moroccan customers who need trusted local professionals;
 - attract artisans and skilled workers who need more visibility and job opportunities;
 - make Snay3i.ma feel useful, trustworthy, local, and human;
 - never invent statistics, testimonials, customers, prices, awards, or partnerships;
 - avoid generic corporate marketing language and repetitive hooks;
-- use a natural Moroccan tone: primarily French, with a light Darija touch when it genuinely improves the post;
 - end with one clear CTA to discover Snay3i.ma or create a professional profile;
 - keep hashtags focused and useful (maximum 6);
 - vary the hook, structure, CTA, and vocabulary from recent automated posts;
