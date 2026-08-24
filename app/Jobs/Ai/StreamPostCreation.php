@@ -125,12 +125,15 @@ class StreamPostCreation implements ShouldBeUnique, ShouldQueue
      * original structure is returned so generation never breaks because of the
      * polish step.
      *
+     * Free OpenRouter generation intentionally skips the second AI pass so the
+     * free allowance is reserved for creating actual posts.
+     *
      * @param  array<string, mixed>  $structured
      * @return array<string, mixed>
      */
     private function humanize(Workspace $workspace, array $structured, GeneratorFormat $format, ContentStyle $style): array
     {
-        if (! $style->humanizes()) {
+        if (! $style->humanizes() || config('ai.default') === 'openai-compatible') {
             return $structured;
         }
 
