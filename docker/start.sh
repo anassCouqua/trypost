@@ -34,26 +34,35 @@ php artisan storage:link || true
 php artisan optimize --ansi
 
 # Keep the scheduler lightweight on Render's 512 MB free instance.
-# Run it once per minute instead of keeping a long-lived PHP scheduler
-# process in memory.
+# Run it once per minute and expose command output so scheduled automation
+# failures are visible in Render logs.
 (
   while true; do
-    php artisan schedule:run --no-ansi >/tmp/trypost-scheduler.log 2>&1 || true
+    echo "Running TryPost scheduler..."
+    if php artisan schedule:run --no-ansi; then
+      SCHEDULE_EXIT=0
+    else
+      SCHEDULE_EXIT=$?
+      echo "TryPost scheduler exited with code ${SCHEDULE_EXIT}; continuing..." >&2
+    fi
     sleep 60
-  done
+done
 ) &
 
 # Process Laravel's database-backed publishing and AI jobs on the same instance.
 # AI generation jobs use the ai queue; social publishing jobs use per-platform
-# queues. Restart automatically if the worker exits unexpectedly.
+# queues. Do not let the shell's `set -e` kill the restart loop when queue:work
+# exits with an error; capture the exit code and restart explicitly.
 (
   while true; do
     echo "Starting TryPost queue worker..."
+    set +e
     php artisan queue:work database \
       --queue=ai,default,social-linkedin,social-linkedin-page,social-x,social-tiktok,social-youtube,social-facebook,social-instagram,social-instagram-facebook,social-threads,social-pinterest,social-bluesky,social-mastodon,social-telegram,social-discord \
       --sleep=3 --tries=3 --timeout=900 --max-time=86400 --no-interaction --no-ansi
     EXIT_CODE=$?
-    echo "TryPost queue worker exited with code ${EXIT_CODE}; restarting in 5 seconds..."
+    set -e
+    echo "TryPost queue worker exited with code ${EXIT_CODE}; restarting in 5 seconds..." >&2
     sleep 5
   done
 ) &
