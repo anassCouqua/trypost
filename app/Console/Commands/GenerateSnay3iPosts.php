@@ -9,14 +9,15 @@ use App\Enums\SocialAccount\Status;
 use App\Jobs\Ai\GenerateAndPublishSnay3iPost;
 use App\Models\Post;
 use App\Models\SocialAccount;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 class GenerateSnay3iPosts extends Command
 {
-    protected $signature = 'snay3i:generate-post {--force : Generate even if the daily limit has been reached}';
+    protected $signature = 'snay3i:generate-post {--force : Rebuild the automation queue even when upcoming posts already exist}';
 
-    protected $description = 'Generate and publish AI-powered Snay3i.ma Facebook content';
+    protected $description = 'Generate and queue the next five AI-powered Snay3i.ma Facebook posts';
 
     public function handle(): int
     {
@@ -33,32 +34,19 @@ class GenerateSnay3iPosts extends Command
             return self::FAILURE;
         }
 
-        $today = now('Africa/Casablanca');
-        $dailyCount = Post::query()
+        $now = Carbon::now('Africa/Casablanca');
+        $existing = Post::query()
             ->where('workspace_id', $account->workspace_id)
             ->where('created_via', CreatedVia::Automation)
-            ->whereDate('created_at', $today->toDateString())
+            ->whereIn('status', ['scheduled', 'publishing'])
+            ->where('scheduled_at', '>', $now->copy()->utc())
             ->count();
 
-        if ($dailyCount >= 5 && ! $this->option('force')) {
-            $this->info('Snay3i daily automation limit reached (5 posts).');
-
+        if ($existing >= 5 && ! $this->option('force')) {
+            $this->info('Snay3i already has five upcoming automated posts scheduled.');
             return self::SUCCESS;
         }
 
-        $lastAutomation = Post::query()
-            ->where('workspace_id', $account->workspace_id)
-            ->where('created_via', CreatedVia::Automation)
-            ->latest('created_at')
-            ->first();
-
-        if ($lastAutomation && $lastAutomation->created_at->gt(now()->subHours(2)) && ! $this->option('force')) {
-            $this->info('Snay3i automation cooldown is active; next post will be generated later.');
-
-            return self::SUCCESS;
-        }
-
-        $slot = $dailyCount + 1;
         $themes = [
             'success stories and the human side of Moroccan skilled trades',
             'a practical tip that helps customers choose a reliable artisan',
@@ -72,16 +60,25 @@ class GenerateSnay3iPosts extends Command
             'a simple home-maintenance tip that helps Moroccan homeowners prevent bigger problems',
         ];
 
-        $theme = $themes[((int) $today->isoWeekday() + $slot - 2) % count($themes)];
+        $slots = $this->nextSlots($now, 5);
+        $queued = 0;
 
-        $prompt = <<<PROMPT
+        foreach ($slots as $index => $slot) {
+            if ($queued + $existing >= 5) {
+                break;
+            }
+
+            $slotNumber = $index + 1;
+            $theme = $themes[((int) $now->isoWeekday() + $slotNumber - 2) % count($themes)];
+            $scheduledAt = $slot->copy()->utc();
+
+            $prompt = <<<PROMPT
 You are the social media content director for Snay3i.ma, a Moroccan platform that helps skilled workers and customers connect.
 
 Create one high-quality Facebook post for Moroccan audiences.
 
-Today's theme: {$theme}
-Post slot: {$slot} of 5 today
-Date: {$today->toDateString()}
+Theme: {$theme}
+Scheduled slot: {$scheduledAt->setTimezone('Africa/Casablanca')->format('Y-m-d H:i')} Morocco time
 
 Voice and language:
 - Sound unmistakably Moroccan and human, never like generic corporate copy.
@@ -102,19 +99,47 @@ Goals:
 - vary the hook, structure, CTA, and vocabulary from recent automated posts;
 - prefer useful, educational, relatable, or community-driven content over repeated promotion.
 
-The image should visually fit the post and be suitable for a Moroccan audience. Prefer realistic people, real trades, tools, homes, workshops, and local context over generic office stock imagery.
+The image should visually fit the post and be suitable for Morocco. Prefer realistic people, real trades, tools, homes, workshops, and local context over generic office stock imagery.
 PROMPT;
 
-        GenerateAndPublishSnay3iPost::dispatch(
-            userId: $account->workspace->user_id,
-            workspaceId: $account->workspace_id,
-            socialAccountId: $account->id,
-            prompt: $prompt,
-            creationId: 'snay3i-'.$today->format('Ymd').'-'.$slot.'-'.Str::lower(Str::random(8)),
-        );
+            GenerateAndPublishSnay3iPost::dispatch(
+                userId: $account->workspace->user_id,
+                workspaceId: $account->workspace_id,
+                socialAccountId: $account->id,
+                prompt: $prompt,
+                creationId: 'snay3i-'.$scheduledAt->format('YmdHi').'-'.$slotNumber.'-'.Str::lower(Str::random(8)),
+                scheduledAt: $scheduledAt->toIso8601String(),
+            );
 
-        $this->info("Queued Snay3i AI post #{$slot} for generation and publishing.");
+            $queued++;
+        }
 
+        $this->info("Queued {$queued} AI-generated Snay3i posts for the upcoming schedule.");
         return self::SUCCESS;
+    }
+
+    /** @return array<int, Carbon> */
+    private function nextSlots(Carbon $now, int $count): array
+    {
+        $preferredHours = [9, 12, 15, 18, 21];
+        $slots = [];
+        $day = $now->copy()->startOfDay();
+
+        for ($dayOffset = 0; count($slots) < $count && $dayOffset < 3; $dayOffset++) {
+            $candidateDay = $day->copy()->addDays($dayOffset);
+
+            foreach ($preferredHours as $hour) {
+                $candidate = $candidateDay->copy()->setTime($hour, 0);
+                if ($candidate->lte($now->copy()->addMinutes(5))) {
+                    continue;
+                }
+                $slots[] = $candidate;
+                if (count($slots) >= $count) {
+                    break;
+                }
+            }
+        }
+
+        return $slots;
     }
 }
