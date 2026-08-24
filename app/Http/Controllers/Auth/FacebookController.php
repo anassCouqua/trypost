@@ -31,7 +31,6 @@ class FacebookController extends SocialController
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
-        'read_insights',
     ];
 
     public function connect(Request $request): Response
