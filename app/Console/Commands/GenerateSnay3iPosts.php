@@ -121,23 +121,11 @@ PROMPT;
     /** @return array<int, Carbon> */
     private function nextSlots(Carbon $now, int $count): array
     {
-        $preferredHours = [9, 12, 15, 18, 21];
         $slots = [];
-        $day = $now->copy()->startOfDay();
+        $first = $now->copy()->addMinutes(15)->second(0);
 
-        for ($dayOffset = 0; count($slots) < $count && $dayOffset < 3; $dayOffset++) {
-            $candidateDay = $day->copy()->addDays($dayOffset);
-
-            foreach ($preferredHours as $hour) {
-                $candidate = $candidateDay->copy()->setTime($hour, 0);
-                if ($candidate->lte($now->copy()->addMinutes(5))) {
-                    continue;
-                }
-                $slots[] = $candidate;
-                if (count($slots) >= $count) {
-                    break;
-                }
-            }
+        for ($i = 0; $i < $count; $i++) {
+            $slots[] = $first->copy()->addHours($i * 2);
         }
 
         return $slots;
