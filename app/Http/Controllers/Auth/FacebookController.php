@@ -197,7 +197,6 @@ class FacebookController extends SocialController
                     'username' => null,
                     'display_name' => data_get($selectedPage, 'name'),
                     'avatar_url' => null,
-                    'access_token' => data_get($selectedPage, 'access_token'),
                     'refresh_token' => null,
                     'token_expires_at' => null,
                     'scopes' => $this->scopes,
@@ -209,6 +208,7 @@ class FacebookController extends SocialController
                         'user_id' => data_get($oauthData, 'user_id'),
                         'user_token' => data_get($oauthData, 'user_token'),
                     ],
+                    'access_token' => data_get($selectedPage, 'access_token'),
                 ],
             );
 
@@ -242,13 +242,41 @@ class FacebookController extends SocialController
             ],
         );
 
-        return collect($pages)->map(fn (array $page) => [
+        $pages = collect($pages)->map(fn (array $page) => [
             'id' => data_get($page, 'id'),
             'name' => data_get($page, 'name'),
             'username' => null,
             'picture' => null,
             'access_token' => data_get($page, 'access_token'),
-        ])->all();
+        ]);
+
+        // Some Meta business/Page configurations can omit an owned Page from
+        // /me/accounts even though the user token can access that Page directly.
+        // A configured Page ID lets self-hosted operators connect that Page
+        // without requiring the app to claim ownership of unrelated Pages.
+        $configuredPageId = trim((string) env('FACEBOOK_PAGE_ID', ''));
+
+        if ($configuredPageId !== '' && ! $pages->contains('id', $configuredPageId)) {
+            $response = Http::get(
+                config('trypost.platforms.facebook.graph_api').'/'.$configuredPageId,
+                [
+                    'fields' => 'id,name,access_token',
+                    'access_token' => $userToken,
+                ],
+            );
+
+            if ($response->successful() && data_get($response->json(), 'access_token')) {
+                $pages->push([
+                    'id' => data_get($response->json(), 'id'),
+                    'name' => data_get($response->json(), 'name'),
+                    'username' => null,
+                    'picture' => null,
+                    'access_token' => data_get($response->json(), 'access_token'),
+                ]);
+            }
+        }
+
+        return $pages->values()->all();
     }
 
     private function graphVersion(): string
