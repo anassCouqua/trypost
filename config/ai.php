@@ -4,17 +4,6 @@ declare(strict_types=1);
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default AI Provider Names
-    |--------------------------------------------------------------------------
-    |
-    | Here you may specify which of the AI providers below should be the
-    | default for AI operations when no explicit provider is provided
-    | for the operation. This should be any provider defined below.
-    |
-    */
-
     'default' => env('AI_TEXT_PROVIDER', 'openai'),
     'default_for_images' => env('AI_IMAGE_PROVIDER', 'openai'),
     'default_for_audio' => env('AI_AUDIO_PROVIDER', 'openai'),
@@ -22,34 +11,12 @@ return [
     'default_for_embeddings' => env('AI_EMBEDDINGS_PROVIDER', 'openai'),
     'default_for_reranking' => env('AI_RERANKING_PROVIDER', 'cohere'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Caching
-    |--------------------------------------------------------------------------
-    |
-    | Below you may configure caching strategies for AI related operations
-    | such as embedding generation. You are free to adjust these values
-    | based on your application's available caching stores and needs.
-    |
-    */
-
     'caching' => [
         'embeddings' => [
             'cache' => false,
             'store' => env('CACHE_STORE', 'database'),
         ],
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | AI Providers
-    |--------------------------------------------------------------------------
-    |
-    | Below are each of your AI providers defined for this application. Each
-    | represents an AI provider and API key combination which can be used
-    | to perform tasks like text, image, and audio creation via agents.
-    |
-    */
 
     'providers' => [
         'anthropic' => [
@@ -60,7 +27,6 @@ return [
                 'text' => ['default' => env('ANTHROPIC_TEXT_MODEL')],
             ],
         ],
-
         'azure' => [
             'driver' => 'azure',
             'key' => env('AZURE_OPENAI_API_KEY'),
@@ -71,7 +37,6 @@ return [
             'image_deployment' => env('AZURE_OPENAI_IMAGE_DEPLOYMENT', 'gpt-image-1'),
             'store' => env('AZURE_OPENAI_STORE', true),
         ],
-
         'bedrock' => [
             'driver' => 'bedrock',
             'region' => env('AWS_BEDROCK_REGION', 'us-east-1'),
@@ -92,7 +57,6 @@ return [
                 'embeddings' => ['default' => env('AWS_BEDROCK_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'cohere' => [
             'driver' => 'cohere',
             'key' => env('COHERE_API_KEY'),
@@ -101,7 +65,6 @@ return [
                 'reranking' => ['default' => env('COHERE_RERANKING_MODEL')],
             ],
         ],
-
         'deepseek' => [
             'driver' => 'deepseek',
             'key' => env('DEEPSEEK_API_KEY'),
@@ -109,7 +72,6 @@ return [
                 'text' => ['default' => env('DEEPSEEK_TEXT_MODEL')],
             ],
         ],
-
         'eleven' => [
             'driver' => 'eleven',
             'key' => env('ELEVENLABS_API_KEY'),
@@ -118,7 +80,6 @@ return [
                 'transcription' => ['default' => env('ELEVENLABS_TRANSCRIPTION_MODEL')],
             ],
         ],
-
         'gemini' => [
             'driver' => 'gemini',
             'key' => env('GEMINI_API_KEY'),
@@ -131,7 +92,6 @@ return [
                 'embeddings' => ['default' => env('GEMINI_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'groq' => [
             'driver' => 'groq',
             'key' => env('GROQ_API_KEY'),
@@ -139,7 +99,6 @@ return [
                 'text' => ['default' => env('GROQ_TEXT_MODEL')],
             ],
         ],
-
         'jina' => [
             'driver' => 'jina',
             'key' => env('JINA_API_KEY'),
@@ -148,7 +107,6 @@ return [
                 'reranking' => ['default' => env('JINA_RERANKING_MODEL')],
             ],
         ],
-
         'mistral' => [
             'driver' => 'mistral',
             'key' => env('MISTRAL_API_KEY'),
@@ -158,7 +116,6 @@ return [
                 'embeddings' => ['default' => env('MISTRAL_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'ollama' => [
             'driver' => 'ollama',
             'key' => env('OLLAMA_API_KEY', ''),
@@ -168,7 +125,6 @@ return [
                 'embeddings' => ['default' => env('OLLAMA_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'openai' => [
             'driver' => 'openai',
             'key' => env('OPENAI_API_KEY'),
@@ -182,17 +138,15 @@ return [
                 'embeddings' => ['default' => env('OPENAI_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'openai-compatible' => [
             'driver' => 'openai-compatible',
-            'url' => env('OPENAI_COMPATIBLE_URL'),
-            'key' => env('OPENAI_COMPATIBLE_API_KEY'),
+            'url' => env('OPENAI_COMPATIBLE_URL', 'https://openrouter.ai/api/v1'),
+            'key' => env('OPENAI_COMPATIBLE_API_KEY', env('OPENROUTER_API_KEY')),
             'models' => [
-                'text' => ['default' => env('OPENAI_COMPATIBLE_TEXT_MODEL')],
+                'text' => ['default' => env('OPENAI_COMPATIBLE_TEXT_MODEL', 'openrouter/free')],
                 'embeddings' => ['default' => env('OPENAI_COMPATIBLE_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'openrouter' => [
             'driver' => 'openrouter',
             'key' => env('OPENROUTER_API_KEY'),
@@ -204,7 +158,6 @@ return [
                 'embeddings' => ['default' => env('OPENROUTER_EMBEDDINGS_MODEL')],
             ],
         ],
-
         'voyageai' => [
             'driver' => 'voyageai',
             'key' => env('VOYAGEAI_API_KEY'),
@@ -213,7 +166,6 @@ return [
                 'reranking' => ['default' => env('VOYAGEAI_RERANKING_MODEL')],
             ],
         ],
-
         'xai' => [
             'driver' => 'xai',
             'key' => env('XAI_API_KEY'),
