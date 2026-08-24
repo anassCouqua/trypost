@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class RegisteredUserController extends Controller
 {
@@ -31,27 +32,34 @@ class RegisteredUserController extends Controller
 
     public function store(RegisterRequest $request): RedirectResponse
     {
-        $attributionParameters = $this->retrieveAttributionParameters();
-        $invite = $request->invite();
+        try {
+            $attributionParameters = $this->retrieveAttributionParameters();
+            $invite = $request->invite();
 
-        $user = CreateUser::execute([
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'password' => $request->validated('password'),
-            'is_invite' => $invite !== null,
-            'registration_ip' => $request->ip(),
-        ], $attributionParameters);
+            $user = CreateUser::execute([
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'password' => $request->validated('password'),
+                'is_invite' => $invite !== null,
+                'registration_ip' => $request->ip(),
+            ], $attributionParameters);
 
-        event(new Registered($user));
+            event(new Registered($user));
 
-        Auth::login($user);
+            Auth::login($user);
 
-        $request->session()->forget('pending_invite_id');
+            $request->session()->forget('pending_invite_id');
 
-        if ($invite) {
-            return redirect()->route('app.invites.show', $invite);
+            if ($invite) {
+                return redirect()->route('app.invites.show', $invite);
+            }
+
+            return redirect()->route('app.welcome');
+        } catch (Throwable $e) {
+            error_log('TryPost /register exception: '.get_class($e).' - '.$e->getMessage());
+            error_log($e->getTraceAsString());
+            return response('TryPost register exception: '.get_class($e).' - '.$e->getMessage(), 500)
+                ->header('Content-Type', 'text/plain; charset=UTF-8');
         }
-
-        return redirect()->route('app.welcome');
     }
 }
