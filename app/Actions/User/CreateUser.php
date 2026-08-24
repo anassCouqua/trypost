@@ -33,7 +33,10 @@ class CreateUser
 
             if (! $requiresCardForTrial) {
                 $accountAttributes['plan_id'] = Plan::where('slug', Slug::Workspace)->value('id');
-                $accountAttributes['trial_ends_at'] = now()->addDays(config('cashier.trial_days'));
+
+                // Environment values are strings; Carbon requires a numeric int/float.
+                $trialDays = (int) config('cashier.trial_days', 8);
+                $accountAttributes['trial_ends_at'] = now()->addDays($trialDays);
             }
 
             $account = Account::create($accountAttributes);
