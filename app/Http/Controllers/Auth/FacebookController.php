@@ -85,12 +85,6 @@ class FacebookController extends SocialController
 
             if (count($pages) === 1) {
                 $page = $pages[0];
-                $avatarPath = null;
-
-                if (filled(data_get($page, 'picture'))) {
-                    $avatarPath = uploadFromUrl(data_get($page, 'picture'));
-                }
-
                 $workspace->socialAccounts()->updateOrCreate(
                     [
                         'platform' => $this->platform->value,
@@ -99,7 +93,7 @@ class FacebookController extends SocialController
                     [
                         'username' => null,
                         'display_name' => data_get($page, 'name'),
-                        'avatar_url' => $avatarPath,
+                        'avatar_url' => null,
                         'access_token' => data_get($page, 'access_token'),
                         'refresh_token' => null,
                         'token_expires_at' => null,
@@ -131,11 +125,15 @@ class FacebookController extends SocialController
             return $this->popupCallback(false, __('accounts.popup_callback.network_taken'), $this->platform->value);
         } catch (\Exception $e) {
             Log::error('Facebook OAuth Error', [
+                'class' => get_class($e),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->popupCallback(false, __('accounts.popup_callback.error_connecting'), $this->platform->value);
+            return $this->popupCallback(
+                false,
+                'Facebook callback diagnostic: '.get_class($e).' — '.$e->getMessage(),
+                $this->platform->value
+            );
         }
     }
 
@@ -190,40 +188,6 @@ class FacebookController extends SocialController
                 return $this->popupCallback(false, __('accounts.popup_callback.page_not_found'), $this->platform->value);
             }
 
-            $avatarPath = null;
-            if (filled(data_get($selectedPage, 'picture'))) {
-                $avatarPath = uploadFromUrl(data_get($selectedPage, 'picture'));
-            }
-
-            $reconnectId = data_get($oauthData, 'reconnect_id');
-
-            if ($reconnectId) {
-                $existingAccount = $workspace->socialAccounts()->find($reconnectId);
-
-                if ($existingAccount) {
-                    $existingAccount->update([
-                        'platform_user_id' => data_get($selectedPage, 'id'),
-                        'username' => null,
-                        'display_name' => data_get($selectedPage, 'name'),
-                        'avatar_url' => $avatarPath,
-                        'access_token' => data_get($selectedPage, 'access_token'),
-                        'refresh_token' => null,
-                        'token_expires_at' => null,
-                        'scopes' => $this->scopes,
-                        'meta' => [
-                            'page_id' => data_get($selectedPage, 'id'),
-                            'user_id' => data_get($oauthData, 'user_id'),
-                            'user_token' => data_get($oauthData, 'user_token'),
-                        ],
-                    ]);
-                    $existingAccount->markAsConnected();
-
-                    session()->forget(['facebook_oauth', 'social_reconnect_id']);
-
-                    return $this->popupCallback(true, __('accounts.popup_callback.reconnected'), $this->platform->value);
-                }
-            }
-
             $workspace->socialAccounts()->updateOrCreate(
                 [
                     'platform' => $this->platform->value,
@@ -232,7 +196,7 @@ class FacebookController extends SocialController
                 [
                     'username' => null,
                     'display_name' => data_get($selectedPage, 'name'),
-                    'avatar_url' => $avatarPath,
+                    'avatar_url' => null,
                     'access_token' => data_get($selectedPage, 'access_token'),
                     'refresh_token' => null,
                     'token_expires_at' => null,
@@ -255,10 +219,15 @@ class FacebookController extends SocialController
             return $this->popupCallback(false, __('accounts.popup_callback.network_taken'), $this->platform->value);
         } catch (\Exception $e) {
             Log::error('Facebook page selection error', [
+                'class' => get_class($e),
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->popupCallback(false, __('accounts.popup_callback.error_connecting_page'), $this->platform->value);
+            return $this->popupCallback(
+                false,
+                'Facebook page-selection diagnostic: '.get_class($e).' — '.$e->getMessage(),
+                $this->platform->value
+            );
         }
     }
 
