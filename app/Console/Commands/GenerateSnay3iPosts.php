@@ -46,6 +46,18 @@ class GenerateSnay3iPosts extends Command
             return self::SUCCESS;
         }
 
+        $lastAutomation = Post::query()
+            ->where('workspace_id', $account->workspace_id)
+            ->where('created_via', CreatedVia::Automation)
+            ->latest('created_at')
+            ->first();
+
+        if ($lastAutomation && $lastAutomation->created_at->gt(now()->subHours(6)) && ! $this->option('force')) {
+            $this->info('Snay3i automation cooldown is active; next post will be generated later.');
+
+            return self::SUCCESS;
+        }
+
         $slot = $dailyCount + 1;
         $themes = [
             'success stories and the human side of Moroccan skilled trades',
