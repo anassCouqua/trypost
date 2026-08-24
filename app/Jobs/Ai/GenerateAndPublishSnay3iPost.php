@@ -5,22 +5,23 @@ declare(strict_types=1);
 namespace App\Jobs\Ai;
 
 use App\Enums\Post\CreatedVia;
+use App\Enums\Post\Status as PostStatus;
 use App\Enums\PostPlatform\ContentType;
 use App\Jobs\PublishPost;
 use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Models\Workspace;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 class GenerateAndPublishSnay3iPost implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable;
 
     public int $uniqueFor = 1800;
 
@@ -30,6 +31,7 @@ class GenerateAndPublishSnay3iPost implements ShouldBeUnique, ShouldQueue
         public string $socialAccountId,
         public string $prompt,
         public string $creationId,
+        public ?string $scheduledAt = null,
     ) {
         $this->onQueue('ai');
     }
@@ -44,6 +46,7 @@ class GenerateAndPublishSnay3iPost implements ShouldBeUnique, ShouldQueue
         $startedAt = now();
         $account = SocialAccount::findOrFail($this->socialAccountId);
         $workspace = Workspace::findOrFail($this->workspaceId);
+        $scheduledAt = $this->scheduledAt ? Carbon::parse($this->scheduledAt)->utc() : null;
 
         StreamPostCreation::dispatchSync(
             userId: $this->userId,
@@ -53,7 +56,7 @@ class GenerateAndPublishSnay3iPost implements ShouldBeUnique, ShouldQueue
             socialAccountId: $account->id,
             imageCount: 1,
             prompt: $this->prompt,
-            date: null,
+            date: $scheduledAt?->toIso8601String(),
             template: 'image_card',
             applyBrandVisuals: true,
         );
@@ -70,7 +73,13 @@ class GenerateAndPublishSnay3iPost implements ShouldBeUnique, ShouldQueue
             throw new \RuntimeException('AI generation completed without creating a post.');
         }
 
-        $post->update(['created_via' => CreatedVia::Automation]);
+        $post->update([
+            'created_via' => CreatedVia::Automation,
+            'status' => $scheduledAt && $scheduledAt->isFuture()
+                ? PostStatus::Scheduled
+                : PostStatus::Draft,
+            'scheduled_at' => $scheduledAt,
+        ]);
 
         $platform = $post->postPlatforms()
             ->where('social_account_id', $account->id)
@@ -85,13 +94,17 @@ class GenerateAndPublishSnay3iPost implements ShouldBeUnique, ShouldQueue
             'enabled' => true,
         ]);
 
-        PublishPost::dispatch($post->fresh());
+        if (! $scheduledAt || $scheduledAt->isPast()) {
+            PublishPost::dispatch($post->fresh());
+        }
 
-        Log::info('Automated Snay3i post generated and queued for publishing', [
+        Log::info('Automated Snay3i post generated', [
             'post_id' => $post->id,
             'workspace_id' => $workspace->id,
             'social_account_id' => $account->id,
             'creation_id' => $this->creationId,
+            'scheduled_at' => $scheduledAt?->toIso8601String(),
+            'status' => $post->status->value,
         ]);
     }
 }
