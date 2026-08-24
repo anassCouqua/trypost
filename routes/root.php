@@ -46,6 +46,7 @@ h1{line-height:1.2} h2{margin-top:32px}.muted{color:#666}
 </body>
 </html>
 HTML, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+});
 
 // Keep the public entry point outside the authenticated application group.
 // This prevents Render/browser requests to / from booting the auth/session
