@@ -19,8 +19,7 @@ Schedule::command(CheckSocialConnections::class)->daily()->withoutOverlapping()-
 Schedule::command(CheckUpcomingPostConnections::class)->everyFifteenMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command(RefreshExpiringTokens::class)->everyFifteenMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command(RecoverStuckPosts::class)->everyThirtyMinutes()->withoutOverlapping()->onOneServer();
-Schedule::command(GenerateSnay3iPosts::class)->dailyAt('09:00')->timezone('Africa/Casablanca')->withoutOverlapping()->onOneServer();
-Schedule::command(GenerateSnay3iPosts::class)->dailyAt('18:00')->timezone('Africa/Casablanca')->withoutOverlapping()->onOneServer();
+Schedule::command(GenerateSnay3iPosts::class)->everyThirtyMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command(FireScheduleTriggers::class)->everyMinute()->withoutOverlapping()->onOneServer();
 Schedule::command(ProcessAutomationDelays::class)->everyMinute()->withoutOverlapping()->onOneServer();
 Schedule::command(RecoverStuckAutomationRuns::class)->everyFiveMinutes()->withoutOverlapping()->onOneServer();
