@@ -72,24 +72,24 @@ class FacebookController extends SocialController
         try {
             $socialUser = Socialite::driver($this->driver)->usingGraphVersion($this->graphVersion())->user();
 
-            // Trigger public_profile and pages_show_list API calls
-            // These calls are needed for Meta app review permission verification
             Http::get(config('trypost.platforms.facebook.graph_api').'/me', [
                 'fields' => 'id,name',
                 'access_token' => $socialUser->token,
             ]);
 
-            // Fetch pages the user manages
             $pages = $this->fetchPages($socialUser->token);
 
             if (empty($pages)) {
                 return $this->popupCallback(false, __('accounts.popup_callback.no_facebook_pages'), $this->platform->value);
             }
 
-            // If only one page, connect directly
             if (count($pages) === 1) {
                 $page = $pages[0];
-                $avatarPath = uploadFromUrl(data_get($page, 'picture'));
+                $avatarPath = null;
+
+                if (filled(data_get($page, 'picture'))) {
+                    $avatarPath = uploadFromUrl(data_get($page, 'picture'));
+                }
 
                 $workspace->socialAccounts()->updateOrCreate(
                     [
@@ -97,7 +97,7 @@ class FacebookController extends SocialController
                         'platform_user_id' => data_get($page, 'id'),
                     ],
                     [
-                        'username' => data_get($page, 'username', null),
+                        'username' => null,
                         'display_name' => data_get($page, 'name'),
                         'avatar_url' => $avatarPath,
                         'access_token' => data_get($page, 'access_token'),
@@ -118,7 +118,6 @@ class FacebookController extends SocialController
                 return $this->popupCallback(true, __('accounts.popup_callback.connected'), $this->platform->value);
             }
 
-            // Multiple pages - store data and show selection
             session([
                 'facebook_oauth' => [
                     'user_token' => $socialUser->token,
@@ -191,17 +190,20 @@ class FacebookController extends SocialController
                 return $this->popupCallback(false, __('accounts.popup_callback.page_not_found'), $this->platform->value);
             }
 
-            $avatarPath = uploadFromUrl(data_get($selectedPage, 'picture'));
+            $avatarPath = null;
+            if (filled(data_get($selectedPage, 'picture'))) {
+                $avatarPath = uploadFromUrl(data_get($selectedPage, 'picture'));
+            }
+
             $reconnectId = data_get($oauthData, 'reconnect_id');
 
             if ($reconnectId) {
-                // Reconnect existing account
                 $existingAccount = $workspace->socialAccounts()->find($reconnectId);
 
                 if ($existingAccount) {
                     $existingAccount->update([
                         'platform_user_id' => data_get($selectedPage, 'id'),
-                        'username' => data_get($selectedPage, 'username') ?? null,
+                        'username' => null,
                         'display_name' => data_get($selectedPage, 'name'),
                         'avatar_url' => $avatarPath,
                         'access_token' => data_get($selectedPage, 'access_token'),
@@ -228,7 +230,7 @@ class FacebookController extends SocialController
                     'platform_user_id' => data_get($selectedPage, 'id'),
                 ],
                 [
-                    'username' => data_get($selectedPage, 'username') ?? null,
+                    'username' => null,
                     'display_name' => data_get($selectedPage, 'name'),
                     'avatar_url' => $avatarPath,
                     'access_token' => data_get($selectedPage, 'access_token'),
@@ -266,7 +268,7 @@ class FacebookController extends SocialController
             config('trypost.platforms.facebook.graph_api').'/me/accounts',
             [
                 'access_token' => $userToken,
-                'fields' => 'id,name,username,picture{url},access_token',
+                'fields' => 'id,name,access_token',
                 'limit' => 100,
             ],
         );
@@ -274,8 +276,8 @@ class FacebookController extends SocialController
         return collect($pages)->map(fn (array $page) => [
             'id' => data_get($page, 'id'),
             'name' => data_get($page, 'name'),
-            'username' => data_get($page, 'username'),
-            'picture' => data_get($page, 'picture.data.url'),
+            'username' => null,
+            'picture' => null,
             'access_token' => data_get($page, 'access_token'),
         ])->all();
     }
