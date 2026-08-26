@@ -12,7 +12,13 @@ jobs:
       - name: Wake TryPost
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --max-time 30 \
+          curl --fail --silent --show-error \
+            --connect-timeout 15 \
+            --max-time 60 \
+            --retry 6 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --retry-max-time 120 \
             https://trypost-5g6o.onrender.com/health.php \
             >/dev/null
           echo "TryPost heartbeat OK"
